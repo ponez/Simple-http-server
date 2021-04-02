@@ -1,0 +1,137 @@
+<html>
+
+<body onload="isAuth()">
+    <div id="login">
+        <input type="text" placeholder="username" id="username">
+        <input type="password" placeholder="password" id="password">
+        <p id="err"></p>
+        <button type="submit" onclick="login()" id="submit">Login</button>
+    </div>
+    <div id="tweets">
+        <p id="hello_username"></p>
+        <input type="text" placeholder="your text" id="3010">
+        <button id="tweetSubmit" onclick="send()">Send!</button>
+        <button onclick="logout()">Logout!</button>
+        <div id="tweets">
+            <ul class='ul'></ul>
+        </div>
+    </div>
+    <script>
+        let timer;
+        let loginInput = document.getElementById("password");
+        let tweetInput = document.getElementById("3010");
+        loginInput.addEventListener("keyup", function (event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                document.getElementById("submit").click();
+            }
+        });
+        tweetInput.addEventListener("keyup", function (event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                document.getElementById("tweetSubmit").click();
+            }
+        });
+
+        function isAuth() {
+            var tweets = document.getElementById("tweets");
+            tweets.style.display = "none";
+            var oReq = new XMLHttpRequest();
+            oReq.addEventListener("load", reqListener, true);
+            oReq.open("GET", "/login");
+            oReq.send(`username:${username}`)
+            oReq.onprogress = function () {
+                let jsonResponse = (JSON.parse(this.response))
+                if (jsonResponse.authorized == true) {
+                    let hello_username = document.getElementById("hello_username").innerHTML = `Hello,${jsonResponse.username.replace('/\n\t/g', "")}`
+                    let tweets = document.getElementById("tweets");
+                    let login = document.getElementById("login");
+                    login.style.display = "none"
+                    tweets.style.display = "block";
+                    getFeed()
+
+                }
+            }
+        }
+        function login() {
+            username = document.getElementById("username").value;
+            password = document.getElementById("password").value;
+            let oReq = new XMLHttpRequest();
+            oReq.addEventListener("load", reqListener, true);
+            oReq.open("POST", "/login");
+            oReq.send(`user_name:${username},password:${password}`)
+            oReq.onprogress = function () {
+
+                let jsonResponse = (JSON.parse(this.response))
+                if (jsonResponse.authorized == true) {
+                    let hello_username = document.getElementById("hello_username").innerHTML = `Hello, ${username}`
+                    let tweets = document.getElementById("tweets");
+                    let login = document.getElementById("login");
+                    login.style.display = "none"
+                    tweets.style.display = "block";
+                    timer = window.setInterval('getFeed()', 60000);
+
+                    getFeed()
+                } else {
+                    document.getElementById("err").innerHTML = "wrong username or password ?"
+                }
+
+            };
+        }
+        function reqListener() {
+        }
+        function getFeed() {
+            let oReq = new XMLHttpRequest();
+            oReq.addEventListener("load", reqListener);
+            oReq.open("GET", "/feed", true);
+            oReq.send()
+            oReq.onprogress = () => {
+                results = JSON.parse(oReq.response)
+                results.forEach(result => {
+                    let node = document.createElement('li');
+                    node.appendChild(document.createTextNode(`${result.username}:${result.tweet}\n`));
+                    document.querySelector('ul').appendChild(node);
+
+                });
+            }
+        }
+        function send() {
+            let tweet = document.getElementById("3010").value;
+            let username = document.getElementById("hello_username").innerHTML.split(',')[1];
+            let oReq = new XMLHttpRequest();
+            oReq.addEventListener("load", reqListener);
+            if (tweet) {
+                oReq.open("POST", "/feed", true);
+                oReq.send(`tweet:${tweet},username:${username}`)
+                oReq.onprogress = () => {
+                    result = JSON.parse(oReq.response.replace('/\n\t/g', ""))
+                    var node = document.createElement('li');
+                    node.appendChild(document.createTextNode(`${result.username} : ${result.tweet}\n`));
+                    document.querySelector('ul').appendChild(node);
+                }
+            }
+        }
+        function logout() {
+
+            let oReq = new XMLHttpRequest();
+            oReq.addEventListener("load", reqListener);
+            oReq.open("POST", "/logout");
+            oReq.send();
+            oReq.onprogress = () => {
+                clearInterval(timer)
+                document.querySelector('body').innerHTML = "";
+                document.write(oReq.response)
+                window.setInterval(() => {
+                    window.location.reload();
+                }, 1000)
+
+            }
+        }
+        function reqListener() {
+            console.log(this.responseText);
+        }
+
+    </script>
+</body>
+
+</html>
